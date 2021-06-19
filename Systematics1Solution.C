@@ -75,12 +75,13 @@ void Systematics1Solution()
   // Various input CAF samples
   
   const std::string FIRST_CAF = "/pnfs/dune/persistent/users/marshalc/CAF/CAFv5/00/CAF_FHC_900.root"; //ND-LAr FHC - one file
-  const std::string SECOND_CAF = "/pnfs/dune/persistent/users/marshalc/CAF/CAFv5/00/CAF_FHC_901.root"; //ND-LAr FHC - one file
-  const std::string ELEVEN_CAFS = "/pnfs/dune/persistent/users/marshalc/CAF/CAFv5/00/CAF_FHC_90*.root"; //This wildcard gives 11 files!
+  const std::string SECOND_CAF = "/pnfs/dune/persistent/users/marshalc/CAF/CAFv5/00/CAF_FHC_902.root"; //ND-LAr FHC - one file
+  const std::string TEN_CAFS = "/pnfs/dune/persistent/users/marshalc/CAF/CAFv5/00/CAF_FHC_90*.root"; //This wildcard gives 10 files!
   
   // Source of events - load them from the one of the sets of files
   SpectrumLoader lFirstCaf(FIRST_CAF);
-  // ***** Add more loaders here (use the shortcut names defined above)
+  SpectrumLoader lSecondCaf(SECOND_CAF);
+  SpectrumLoader lTenCafs(TEN_CAFS);
 
   // We want to plot a histogram with 40 bins, covering the range 0 to 10 GeV
   const Binning binsEnergy = Binning::Simple(40, 0, 10);
@@ -103,12 +104,16 @@ void Systematics1Solution()
   const Cut kNuMuCC = kIsNumuCC && !kIsAntiNu; //The modes are defined at the top
 
   // Define the Spectrum
-  Spectrum sFirstCaf(lFirstCaf, axTrue, kNuMuCC); // **** You'll be adding more Spectrum objectss
+  Spectrum sFirstCaf(lFirstCaf, axTrue, kNuMuCC); // **** You'll be adding more Spectrum objects
+  Spectrum sSecondCaf(lSecondCaf, axTrue, kNuMuCC);
+  Spectrum sTenCafs(lTenCafs, axTrue, kNuMuCC);
 
   
   // Fill all the Spectrum objects from the loader
   lFirstCaf.Go(); // **** You'll be adding more Loaders
-
+  lSecondCaf.Go();
+  lTenCafs.Go();
+  
   /* 
      Set to the same exposure as before
   */  
@@ -118,18 +123,23 @@ void Systematics1Solution()
   // Convert and draw
   TCanvas *canvas = new TCanvas; // Make a canvas
   
-  // Spectrum for CAF file 1
+  
   TH1D *hFirstCaf = sFirstCaf.ToTH1(pot, kAzure-7);
+  TH1D *hSecondCaf = sSecondCaf.ToTH1(pot, kOrange-2);
+  TH1D *hTenCafs = sTenCafs.ToTH1(pot, kOrange+7);
   // ROOT colors are defined at https://root.cern.ch/doc/master/classTColor.
 
-  //  hFirstCaf->Print() // ***** Uncomment to see a print of the histogram values
+  //hFirstCaf->Print("ALL"); // ***** Uncomment to see a print of the histogram values
   
-  hFirstCaf->Draw("E"); // ****** Change this to show error bars
-
+  hFirstCaf->Draw("E"); // ****** This now shows error bars
+  hSecondCaf->Draw("E SAME");
+  hTenCafs->Draw("E SAME");
   
   auto legend = new TLegend(0.65,0.65,0.9,0.9); // x and y coordinates of corners
   legend->SetHeader("CAFs used","C"); // option "C" to center the header
-  legend->AddEntry(hFirstCaf,"First CAF","l");
+  legend->AddEntry(hFirstCaf,"1st CAF","l");
+  legend->AddEntry(hSecondCaf,"2nd CAF","l");
+  legend->AddEntry(hTenCafs,"10 CAFs","l");
   legend->Draw();
   
   canvas->SaveAs("Systematics1.png"); // Save the result

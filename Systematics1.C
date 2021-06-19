@@ -1,4 +1,4 @@
-// To run this, type: cafe Systematics1Solution.C
+// To run this, type: cafe Systematics1.C
 
 // These are standard header files from the CAFAna analysis tool
 // They allow you to load and plot variables for each interaction event
@@ -70,18 +70,19 @@ using namespace ana;
 
 // This is the main function. To use ROOT's interpreted interface, you need to define a function
 // with the same name as your file (minus the .C file extension)
-void Systematics1Solution()
+void Systematics1()
 {
   // Various input CAF samples
   
   const std::string FIRST_CAF = "/pnfs/dune/persistent/users/marshalc/CAF/CAFv5/00/CAF_FHC_900.root"; //ND-LAr FHC - one file
-  const std::string SECOND_CAF = "/pnfs/dune/persistent/users/marshalc/CAF/CAFv5/00/CAF_FHC_901.root"; //ND-LAr FHC - one file
-  const std::string ELEVEN_CAFS = "/pnfs/dune/persistent/users/marshalc/CAF/CAFv5/00/CAF_FHC_90*.root"; //This wildcard gives 11 files!
+  const std::string SECOND_CAF = "/pnfs/dune/persistent/users/marshalc/CAF/CAFv5/00/CAF_FHC_902.root"; //ND-LAr FHC - one file
+  const std::string TEN_CAFS = "/pnfs/dune/persistent/users/marshalc/CAF/CAFv5/00/CAF_FHC_90*.root"; //This wildcard gives 10 files!
   
   // Source of events - load them from the one of the sets of files
   SpectrumLoader lFirstCaf(FIRST_CAF);
   // ***** Add more loaders here (use the shortcut names defined above)
-
+  
+  
   // We want to plot a histogram with 40 bins, covering the range 0 to 10 GeV
   const Binning binsEnergy = Binning::Simple(40, 0, 10);
   // ****** This is where you can change the number of bins
@@ -103,7 +104,8 @@ void Systematics1Solution()
   const Cut kNuMuCC = kIsNumuCC && !kIsAntiNu; //The modes are defined at the top
 
   // Define the Spectrum
-  Spectrum sFirstCaf(lFirstCaf, axTrue, kNuMuCC); // **** You'll be adding more Spectrum objectss
+  Spectrum sFirstCaf(lFirstCaf, axTrue, kNuMuCC);
+  // **** You'll be adding more Spectrum objects here. 
 
   
   // Fill all the Spectrum objects from the loader
@@ -122,8 +124,7 @@ void Systematics1Solution()
   TH1D *hFirstCaf = sFirstCaf.ToTH1(pot, kAzure-7);
   // ROOT colors are defined at https://root.cern.ch/doc/master/classTColor.
 
-  //  hFirstCaf->Print() // ***** Uncomment to see a print of the histogram values
-  
+  //  hFirstCaf->Print("ALL"); // ***** Uncomment to see a print of the histogram values
   hFirstCaf->Draw("HIST"); // ****** Change this to show error bars
 
   
