@@ -1,4 +1,4 @@
-// To run this, type: cafe Systematics2Solution.C
+// To run this, type: cafe Systematics1Solution.C
 
 // These are standard header files from the CAFAna analysis tool
 // They allow you to load and plot variables for each interaction event
@@ -70,7 +70,7 @@ using namespace ana;
 
 // This is the main function. To use ROOT's interpreted interface, you need to define a function
 // with the same name as your file (minus the .C file extension)
-void Systematics2Solution()
+void Systematics2()
 {
   // CAFs
   const std::string CAFS = "/pnfs/dune/persistent/users/marshalc/CAF/CAFv5/00/CAF_FHC_90*.root"; //This wildcard gives 10 files!
@@ -110,6 +110,8 @@ void Systematics2Solution()
   // Define the Spectrum
   Spectrum sMuonEnergy(loader, axMuons, kHasCC0PiFinalState);
 
+  
+/* *********** SYSTEMATICS CODE STARTS HERE */
   // Define a class to make the systematic energy shift
    // In this case it scales the muon energy by +/- 20 %
    class EMuScale: public ISyst
@@ -132,59 +134,13 @@ void Systematics2Solution()
    
    // Make an object of the EMuScale shifter type we just defined
    EMuScale kEMuScale;
-   SystShifts ssScaleUp(&kEMuScale, +1); // Scale UP by 20%
-   SystShifts ssScaleDn(&kEMuScale, -1); // Scale DOWN by 20%
+   SystShifts ssScaleUp(&kEMuScale, +1); // Scale UP by 20%. For shift DOWN, you would need to use -1 as your sigma instead of +1
    
    // Make Spectrum objects for the shifted energies.
    // Note the extra parameter to indicate the shift (the rest stays the same as for the central value)
    Spectrum sScaleUp(loader, axMuons, kHasCC0PiFinalState, ssScaleUp);
-   Spectrum sScaleDn(loader, axMuons, kHasCC0PiFinalState, ssScaleDn);
-  
-  // 20% smear
-  class EMuSmear: public ISyst
-  {
-  public:
-    EMuSmear(): ISyst("muSmear", "Muon energy smearing") {}
-
-    virtual void Shift(double sigma,
-                       Restorer& restore,
-                       caf::SRProxy* sr,
-                       double& weight) const override
-    {
-      restore.Add(sr->Elep_reco);
-
-      // NB - the way this syst works there's no sense in doing -1 sigma
-      sr->Elep_reco *= 1 + sigma*gRandom->Gaus(0, 0.2);
-    }
-  };
-  EMuSmear kEMuSmear;
-
-  Spectrum sSmear(loader, axMuons, kHasCC0PiFinalState,  SystShifts(&kEMuSmear, +1));
-  
-  
-  // Change the probability of RES events by 50%
-  class ResNorm: public ISyst
-  {
-  public:
-    ResNorm(): ISyst("resNorm", "Resonant event normalization") {}
-
-    virtual void Shift(double sigma,
-                       Restorer& restore,
-                       caf::SRProxy* sr,
-                       double& weight) const override
-    {
-      // For resonant events only...
-      if (sr->mode == MODE_RES)
-        weight *= 1 + .5*sigma; // increase or decrease the weight by 50%
-        // NB *= not =. This is important if you compose multiple systs
-    }
-  };
-  ResNorm kResNorm;
-    
-    Spectrum sResUp(loader, axMuons, kHasCC0PiFinalState, SystShifts(&kResNorm, +1)); //Shift RES normalization up
-    Spectrum sResDn(loader, axMuons, kHasCC0PiFinalState, SystShifts(&kResNorm, -1)); //Shift RES normalization down
-  
- 
+ /* *********** SYSTEMATICS CODE ENDS HERE */
+   
   // Fill all the Spectrum objects from the loader
   loader.Go();
 
@@ -195,34 +151,11 @@ void Systematics2Solution()
   TCanvas *canvas = new TCanvas; // Make a canvas
   
   TH1D *hMuonEnergy = sMuonEnergy.ToTH1(pot, kAzure-7);
-  // ROOT colors are defined at https://root.cern.ch/doc/master/classTColor.html
+  // ROOT colors are defined at https://root.cern.ch/doc/master/classTColor
   hMuonEnergy->Draw("E");
-  
-  // Scale up and down
-  TH1D *hScaleUp = sScaleUp.ToTH1(pot, kOrange-2);
-  TH1D *hScaleDn = sScaleDn.ToTH1(pot, kOrange-2,7);
-  hScaleUp->Draw("HIST SAME");
-  hScaleDn->Draw("HIST SAME");
-  
-  
-  //Smear
-  TH1D *hSmear = sSmear.ToTH1(pot, kOrange+7);
-  hSmear->Draw("HIST SAME");
-    
-  // Resonant normalization and down
-  TH1D *hResUp = sResUp.ToTH1(pot, kSpring+5);
-  TH1D *hResDn = sResDn.ToTH1(pot, kSpring+5,7);
-  hResUp->Draw("HIST SAME");
-  hResDn->Draw("HIST SAME");
-    
-  
+
   auto legend = new TLegend(0.65,0.65,0.9,0.9); // x and y coordinates of corners
   legend->AddEntry(hMuonEnergy,"Central value","l");
-  legend->AddEntry(hScaleUp,"Scale up","l");
-  legend->AddEntry(hScaleDn,"Scale down","l");
-  legend->AddEntry(hSmear,"Smear","l");
-  legend->AddEntry(hResUp,"Res up","l");
-  legend->AddEntry(hResDn,"Res down","l");
   legend->Draw();
   
   canvas->SaveAs("Systematics2.png"); // Save the result
