@@ -101,6 +101,7 @@ void Systematics3Solution()
                                     // Our shifts might have made it negative, that doesn't seem real...
                                    if(Emu < M_MU) return 0.;
                                    const double cosmu = cos(sr->theta_reco);
+    if (isnan(Emu) || isnan(cosmu))return 0.;
                                    return QEFormula(Emu, cosmu);
                                  });
   const HistAxis axRecoQEFormula("Reconstructed QE energy (GeV)", binsEnergy, kRecoQEFormulaEnergy);
@@ -116,9 +117,6 @@ void Systematics3Solution()
                                   const int totPi = sr->nipip + sr->nipim + sr->nipi0;
                                   return abs(sr->LepPDG) == 13 && sr->nP >= 1 && totPi == 0;
                                 });
-  
-  
-  
   
 
   // Define the central-value Spectrum
