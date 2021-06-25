@@ -66,6 +66,16 @@ const double E_B = .028; // Binding energy for nucleons in argon-40 in GeV
 using namespace ana;
 using util::sqr;
 
+// **** function to make a fractional plot
+TH1D *MakeFractionalPlot( TH1D* shifted, TH1D *cv)
+{
+  TH1D *frac= (TH1D*) shifted->Clone();
+  frac->Add(cv,-1);
+  frac->Divide(cv);
+  return frac;
+}
+
+
 // Define the quasi-elastic formula for neutrino energy
 double QEFormula(double Emu, double cosmu) // Muon energy and cosine of muon angle
 {
@@ -236,4 +246,35 @@ void Systematics3Solution()
   legend->Draw();
   
   canvas->SaveAs("Systematics3.png"); // Save the result
+  
+  // Calculate ratios
+  // Convert and draw
+  TCanvas *canvasFrac = new TCanvas; // Make a canvas
+  
+  TH1D *fracScaleUp= MakeFractionalPlot(hScaleUp,hCV);
+  TH1D *fracScaleDn= MakeFractionalPlot(hScaleDn,hCV);
+  TH1D *fracSmear= MakeFractionalPlot(hSmear,hCV);
+  TH1D *fracThetaSmear= MakeFractionalPlot(hThetaSmear,hCV);
+  fracScaleUp->GetYaxis()->SetTitle("Fractional shift");
+  fracScaleUp->GetYaxis()->SetRangeUser(-1.5,1.5);
+  
+  hCV->Sumw2(); //Make sure the errors behave
+  TH1D *fracCV= MakeFractionalPlot(hCV,hCV); // Hope this is all zero! But it should have stat uncertainties on it
+  
+  fracScaleUp->Draw("HIST");
+  fracScaleDn->Draw("HIST SAME");
+  fracSmear->Draw("HIST SAME");
+  fracThetaSmear->Draw("HIST SAME");
+  fracCV->Draw("E SAME");
+  
+  auto legend2 = new TLegend(0.65,0.11,0.9,0.36); // x and y coordinates of corners
+  legend2->AddEntry(fracCV,"Central value","l");
+  legend2->AddEntry(fracScaleUp,"Scale up","l");
+  legend2->AddEntry(fracScaleDn,"Scale down","l");
+  legend2->AddEntry(fracSmear,"Smear","l");
+  legend2->AddEntry(fracThetaSmear,"#theta smear","l");
+  legend2->Draw();
+  
+  canvasFrac->SaveAs("SystematicsFractions.png");
+  
 }
