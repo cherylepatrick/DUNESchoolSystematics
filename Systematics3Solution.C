@@ -63,8 +63,6 @@ const double M_N = .939; // Neutron mass in GeV
 const double M_MU = .106; // Muon mass in GeV
 const double E_B = .028; // Binding energy for nucleons in argon-40 in GeV
 
-
-
 using namespace ana;
 using util::sqr;
 
@@ -79,6 +77,7 @@ double QEFormula(double Emu, double cosmu) // Muon energy and cosine of muon ang
   if (denom==0) return 0;
   return num/denom;
 }
+
 // This is the main function. To use ROOT's interpreted interface, you need to define a function
 // with the same name as your file (minus the .C file extension)
 void Systematics3Solution()
@@ -101,7 +100,7 @@ void Systematics3Solution()
                                     // Our shifts might have made it negative, that doesn't seem real...
                                    if(Emu < M_MU) return 0.;
                                    const double cosmu = cos(sr->theta_reco);
-    if (isnan(Emu) || isnan(cosmu))return 0.;
+                                   if (isnan(Emu) || isnan(cosmu))return 0.;
                                    return QEFormula(Emu, cosmu);
                                  });
   const HistAxis axRecoQEFormula("Reconstructed QE energy (GeV)", binsEnergy, kRecoQEFormulaEnergy);
@@ -193,8 +192,8 @@ void Systematics3Solution()
   };
   ResNorm kResNorm;
     
-    Spectrum sResUp(loader, axRecoQEFormula, kHasCC0PiFinalState, SystShifts(&kResNorm, +1)); //Shift RES normalization up
-    Spectrum sResDn(loader, axRecoQEFormula, kHasCC0PiFinalState, SystShifts(&kResNorm, -1)); //Shift RES normalization down
+  Spectrum sResUp(loader, axRecoQEFormula, kHasCC0PiFinalState, SystShifts(&kResNorm, +1)); //Shift RES normalization up
+  Spectrum sResDn(loader, axRecoQEFormula, kHasCC0PiFinalState, SystShifts(&kResNorm, -1)); //Shift RES normalization down
   
  
   // Fill all the Spectrum objects from the loader
