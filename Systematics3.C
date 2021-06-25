@@ -63,9 +63,21 @@ const double M_N = .939; // Neutron mass in GeV
 const double M_MU = .106; // Muon mass in GeV
 const double E_B = .028; // Binding energy for nucleons in argon-40 in GeV
 
-
-
 using namespace ana;
+using util::sqr;
+
+
+// Define the quasi-elastic formula for neutrino energy
+double QEFormula(double Emu, double cosmu) // Muon energy and cosine of muon angle
+{
+  //Muon momentum
+  const double pmu = sqrt(sqr(Emu) - sqr(M_MU)); // Use the relativity formula E^2 = p^2 + m^2
+  // This is the neutrino-mode version of the formula. For antineutrino mode, swap neutron and proton masses.
+  const double num = sqr(M_P) - sqr(M_N - E_B) - sqr(M_MU) + 2 * (M_N - E_B) * Emu;
+  const double denom = 2 * (M_N - E_B - Emu + pmu * cosmu);
+  if (denom==0) return 0;
+  return num/denom;
+}
 
 
 // This is the main function. To use ROOT's interpreted interface, you need to define a function
@@ -81,21 +93,30 @@ void Systematics3()
   // We want to plot a histogram with 40 bins, covering the range 0 to 10 GeV
   const Binning binsEnergy = Binning::Simple(40, 0, 10);
 
-  // Define the label, binning, and contents that we want for our first histogram
-  // The axis label can be whatever you like.
-  // The binning needs to be a Binning object like the one we just made.
-  // The Variable that we are plotting can be a single variable or function of variables from
-  // the CAFs. See https://wiki.dunescience.org/wiki/CAFAna_Variables
-  // We want to plot true energy
+  // Variables
   
-
+  // Muon energy
   const Var kRecoMuonEnergy([](const caf::SRProxy* sr)
   {
     return  sr->Elep_reco;
   });
+  // Neutrino energy from the QE reconstruction formula
+  const Var kRecoQEFormulaEnergy([](const caf::SRProxy* sr)
+                                 {
+                                   const double Emu = sr->Elep_reco;
+
+                                    // NB reco doesn't always work out!
+                                    // Our shifts might have made it negative, that doesn't seem real...
+                                   if(Emu < M_MU) return 0.;
+                                   const double cosmu = cos(sr->theta_reco);
+                                   if (isnan(Emu) || isnan(cosmu))return 0.;
+                                   return QEFormula(Emu, cosmu);
+                                 });
   
   const HistAxis axMuons("Reconstructed E_{#mu} (GeV)", binsEnergy, kRecoMuonEnergy);
-
+// ***** You'll want to add an axis for the QE formula energy
+  
+  
   // Now we have defined an axis and a variable we want to plot on it, let's decide which
   // events to plot. So here we are telling the loader to load a spectrum with our defined axis
   // Here, we are defining the selections or "cuts" using the variable names in CAFAna https://wiki.dunescience.org/wiki/CAFAna_Cuts
@@ -109,6 +130,7 @@ void Systematics3()
 
   // Define the Spectrum
   Spectrum sMuonEnergy(loader, axMuons, kHasCC0PiFinalState);
+ // **** To plot neutrino energy, you'll need to modify the Spectrum objects to use your new axis. Do you need to change the rest, or can it stay the same?
 
   // Define a class to make the systematic energy shift
    // In this case it scales the muon energy by +/- 20 %
@@ -218,5 +240,5 @@ void Systematics3()
   legend->AddEntry(hThetaSmear,"#theta smear","l");
   legend->Draw();
   
-  canvas->SaveAs("Systematics2.png"); // Save the result
+  canvas->SaveAs("Systematics3.png"); // Save the result
 }

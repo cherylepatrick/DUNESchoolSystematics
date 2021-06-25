@@ -119,7 +119,7 @@ void Systematics3Solution()
   
 
   // Define the central-value Spectrum
-  Spectrum sCV(loader, axRecoQEFormula, kHasCC0PiFinalState);
+  Spectrum sCV(loader, axRecoQEFormula, kHasCC0PiFinalState && kRecoQEFormulaEnergy>0);
 
   // Define a class to make the systematic energy shift
    // In this case it scales the muon energy by +/- 20 %
@@ -148,8 +148,8 @@ void Systematics3Solution()
    
    // Make Spectrum objects for the shifted energies.
    // Note the extra parameter to indicate the shift (the rest stays the same as for the central value)
-   Spectrum sScaleUp(loader, axRecoQEFormula, kHasCC0PiFinalState, ssScaleUp);
-   Spectrum sScaleDn(loader, axRecoQEFormula, kHasCC0PiFinalState, ssScaleDn);
+   Spectrum sScaleUp(loader, axRecoQEFormula, kHasCC0PiFinalState && kRecoQEFormulaEnergy>0, ssScaleUp);
+   Spectrum sScaleDn(loader, axRecoQEFormula, kHasCC0PiFinalState && kRecoQEFormulaEnergy>0, ssScaleDn);
   
   // 20% smear
   class EMuSmear: public ISyst
@@ -170,31 +170,31 @@ void Systematics3Solution()
   };
   EMuSmear kEMuSmear;
 
-  Spectrum sSmear(loader, axRecoQEFormula, kHasCC0PiFinalState,  SystShifts(&kEMuSmear, +1));
+  // Let's require the reconstructed energy > 0 so we only include events we really managed to reconstruct
+  Spectrum sSmear(loader, axRecoQEFormula, kHasCC0PiFinalState && kRecoQEFormulaEnergy>0,  SystShifts(&kEMuSmear, +1));
   
   
-  // Change the probability of RES events by 50%
-  class ResNorm: public ISyst
+  
+  // Smear muon angle with sigma of 30 degrees (pi/6 radians)
+  class ThetaSmear: public ISyst
   {
   public:
-    ResNorm(): ISyst("resNorm", "Resonant event normalization") {}
+    ThetaSmear(): ISyst("thetaSmear", "Muon angle smearing") {}
 
     virtual void Shift(double sigma,
                        Restorer& restore,
                        caf::SRProxy* sr,
                        double& weight) const override
     {
-      // For resonant events only...
-      if (sr->mode == MODE_RES)
-        weight *= 1 + .5*sigma; // increase or decrease the weight by 50%
-        // NB *= not =. This is important if you compose multiple systs
+      restore.Add(sr->theta_reco);
+
+      // Theta is in radians so we smear with a width of pi/6
+      sr->theta_reco += sigma*gRandom->Gaus(0, TMath::Pi()/6.0);
     }
   };
-  ResNorm kResNorm;
+  ThetaSmear kThetaSmear;
     
-  Spectrum sResUp(loader, axRecoQEFormula, kHasCC0PiFinalState, SystShifts(&kResNorm, +1)); //Shift RES normalization up
-  Spectrum sResDn(loader, axRecoQEFormula, kHasCC0PiFinalState, SystShifts(&kResNorm, -1)); //Shift RES normalization down
-  
+  Spectrum sThetaSmear(loader, axRecoQEFormula, kHasCC0PiFinalState && kRecoQEFormulaEnergy>0,  SystShifts(&kThetaSmear, +1));
  
   // Fill all the Spectrum objects from the loader
   loader.Go();
@@ -207,6 +207,8 @@ void Systematics3Solution()
   
   TH1D *hCV = sCV.ToTH1(pot, kAzure-7);
   // ROOT colors are defined at https://root.cern.ch/doc/master/classTColor.html
+  // Set the height a bit higher so we can see all the error bands
+  hCV->GetYaxis()->SetRangeUser(0,hCV->GetMaximum()*1.3);
   hCV->Draw("E");
   
   // Scale up and down
@@ -220,11 +222,9 @@ void Systematics3Solution()
   TH1D *hSmear = sSmear.ToTH1(pot, kOrange+7);
   hSmear->Draw("HIST SAME");
     
-  // Resonant normalization and down
-  TH1D *hResUp = sResUp.ToTH1(pot, kSpring+5);
-  TH1D *hResDn = sResDn.ToTH1(pot, kSpring+5,7);
-  hResUp->Draw("HIST SAME");
-  hResDn->Draw("HIST SAME");
+  // Angle Smear
+  TH1D *hThetaSmear = sThetaSmear.ToTH1(pot, kAzure-9);
+  hThetaSmear->Draw("HIST SAME");
     
   
   auto legend = new TLegend(0.65,0.65,0.9,0.9); // x and y coordinates of corners
@@ -232,8 +232,7 @@ void Systematics3Solution()
   legend->AddEntry(hScaleUp,"Scale up","l");
   legend->AddEntry(hScaleDn,"Scale down","l");
   legend->AddEntry(hSmear,"Smear","l");
-  legend->AddEntry(hResUp,"Res up","l");
-  legend->AddEntry(hResDn,"Res down","l");
+  legend->AddEntry(hThetaSmear,"#theta smear","l");
   legend->Draw();
   
   canvas->SaveAs("Systematics3.png"); // Save the result
